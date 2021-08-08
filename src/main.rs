@@ -25,31 +25,47 @@ struct Opt {
 
 fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String, FixedOffset) {
     if loc == "Mickleham" {
-        return (51.268, -0.321, loc, FixedOffset::east(1 * 3600)); 
+        let m_lat = 51.268;
+        let m_lon = -0.321;
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(1 * 3600)); 
     }
     else if loc == "Preveza" { 
-        return (38.95, 20.73, loc, FixedOffset::east(3 * 3600)); 
+        let m_lat = 38.95;
+        let m_lon = 20.73;
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(3 * 3600)); 
     }
-    else if loc == "Castlegregory" { 
-        return (52.255549, -10.02099, loc, FixedOffset::east(1 * 3600)); 
+    else if loc == "Castlegregory" {
+        let m_lat = 52.255549;
+        let m_lon = -10.02099; 
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(1 * 3600)); 
     }
     else if loc == "Casa" { 
-        return (41.895556, 2.806389, loc, FixedOffset::east(2 * 3600)); 
+        let m_lat = 41.895556;
+        let m_lon = 2.806389;
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(2 * 3600)); 
     }
     else if loc == "Austin" {
-        return (30.267222, -97.743056, loc, FixedOffset::west(5 * 3600));
+        let m_lat = 30.267222;
+        let m_lon = -97.743056;       
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(5 * 3600));
     }
     else if loc == "Cary" {
-        return (35.791667, -78.781111, loc, FixedOffset::west(4 * 3600));
+        let m_lat = 35.791667;
+        let m_lon = -78.781111;        
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(4 * 3600));
     }
     else if loc == "Black_Forest" {
-        return (39.060825, -104.67525, loc, FixedOffset::west(6 * 3600));
+        let m_lat = 39.060825;
+        let m_lon = -104.67525;
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(6 * 3600));
     }
     else if loc == "Hoopa" {
-        return (41.050278, -123.674167, loc, FixedOffset::west(7 * 3600));
+        let m_lat = 41.050278;
+        let m_lon = -123.674167;
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(7 * 3600));
     }
     else {
-        return (lat, lon, format!("{}, {}", lat, lon), FixedOffset::west(0));
+        return (lat, lon, format!("[{},{}]", lat, lon), FixedOffset::west(0));
     };
 }
 
