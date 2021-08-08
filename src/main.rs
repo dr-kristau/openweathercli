@@ -36,6 +36,18 @@ fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String) {
     else if loc == "Casa" { 
         return (41.895556, 2.806389, loc); 
     }
+    else if loc == "Austin" {
+        return (30.267222, -97.743056, loc);
+    }
+    else if loc == "Cary" {
+        return (35.791667, -78.781111, loc);
+    }
+    else if loc == "Black_Forest" {
+        return (39.060825, -104.67525, loc);
+    }
+    else if loc == "Hoopa" {
+        return (41.050278, -123.674167, loc);
+    }
     else {
         return (lat, lon, format!("{}, {}", lat, lon));
     };
