@@ -2,7 +2,7 @@ use openweathermap::*;
 use structopt::StructOpt;
 use anyhow::{Result, bail};
 //use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-use chrono::{Utc, Duration, TimeZone};
+use chrono::{Utc, Duration, TimeZone, FixedOffset};
 
 #[derive(StructOpt)]
 struct Opt {
@@ -23,38 +23,38 @@ struct Opt {
     api_key: String
 }
 
-fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String) {
+fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String, FixedOffset) {
     if loc == "Mickleham" {
-        return (51.268, -0.321, loc); 
+        return (51.268, -0.321, loc, FixedOffset::east(1 * 3600)); 
     }
     else if loc == "Preveza" { 
-        return (38.95, 20.73, loc); 
+        return (38.95, 20.73, loc, FixedOffset::east(3 * 3600)); 
     }
     else if loc == "Castlegregory" { 
-        return (52.255549, -10.02099, loc); 
+        return (52.255549, -10.02099, loc, FixedOffset::east(1 * 3600)); 
     }
     else if loc == "Casa" { 
-        return (41.895556, 2.806389, loc); 
+        return (41.895556, 2.806389, loc, FixedOffset::east(2 * 3600)); 
     }
     else if loc == "Austin" {
-        return (30.267222, -97.743056, loc);
+        return (30.267222, -97.743056, loc, FixedOffset::west(5 * 3600));
     }
     else if loc == "Cary" {
-        return (35.791667, -78.781111, loc);
+        return (35.791667, -78.781111, loc, FixedOffset::west(4 * 3600));
     }
     else if loc == "Black_Forest" {
-        return (39.060825, -104.67525, loc);
+        return (39.060825, -104.67525, loc, FixedOffset::west(6 * 3600));
     }
     else if loc == "Hoopa" {
-        return (41.050278, -123.674167, loc);
+        return (41.050278, -123.674167, loc, FixedOffset::west(7 * 3600));
     }
     else {
-        return (lat, lon, format!("{}, {}", lat, lon));
+        return (lat, lon, format!("{}, {}", lat, lon), FixedOffset::west(0));
     };
 }
 
-fn print_current(current:Current, location:String) {
-    println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0));
+fn print_current(current:Current, location:String, timezone:FixedOffset) {
+    println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0).with_timezone(&timezone));
     for elem in current.weather {
         println!("Short weather: {}", elem.main);
         println!("Weather description: {}", elem.description);
@@ -99,8 +99,8 @@ fn print_current(current:Current, location:String) {
         }
         None => {}
     }
-    println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0));
-    println!("Sunset: {}", Utc.timestamp(current.sunset, 0));
+    println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0).with_timezone(&timezone));
+    println!("Sunset: {}", Utc.timestamp(current.sunset, 0).with_timezone(&timezone));
     println!("UV Index: {}", current.uvi);
     println!("Visibility: {}m", current.visibility);
     println!("Wind degrees: {}º", current.wind_deg);
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
    let latlonloc = get_latlonloc(latitude, longitude, location);
    let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
     
-   print_current(api_result.current, latlonloc.2);
+   print_current(api_result.current, latlonloc.2, latlonloc.3);
 
    Ok(())
 }
