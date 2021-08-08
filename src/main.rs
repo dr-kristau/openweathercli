@@ -49,7 +49,7 @@ fn print_current(current:Current, location:String) {
     }
     println!("Temperature: {}ºC", current.temp);
     println!("Humidity: {}%", current.humidity);
-    println!("Pressure: {}", current.pressure);
+    println!("Pressure: {}hPa", current.pressure);
     println!("Cloud cover: {}%", current.clouds);
     println!("Dew Point: {}ºC", current.dew_point);
     println!("Heat Index: {}ºC", current.feels_like);
