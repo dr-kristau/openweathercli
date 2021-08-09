@@ -3,7 +3,7 @@ A small cli app using the [openweathermap fork](https://github.com/Dr-Kristau/op
 
 Usage:
 ```bash
-openweathercli --lat 30.267222 --lon -97.743056 --loc Austin_TX --days 0.5 --utc=-5 --api_key <MY_API_KEY>
+openweathercli --lat 30.267222 --lon=-97.743056 --loc Austin_TX --days 0.5 --utc=-5 --api_key <MY_API_KEY>
 ```
 
 Where:
