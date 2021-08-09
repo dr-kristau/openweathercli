@@ -149,7 +149,7 @@ fn main() -> Result<()> {
    let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location);
 
    if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
-        bail!("Location '{}' is not recognized, and both lattitude and longitude are zero.", latlonloc.2);
+        bail!("Location '{}' is not recognized, and both latitude and longitude are zero.", latlonloc.2);
    }
 
    let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
