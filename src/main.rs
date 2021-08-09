@@ -24,49 +24,52 @@ struct Opt {
 }
 
 fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String, FixedOffset) {
+    let mut m_lat = lat;
+    let mut m_lon = lon;
+    let mut timeoffset = FixedOffset::west(0);
+
     if loc == "Mickleham" {
-        let m_lat = 51.268;
-        let m_lon = -0.321;
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(1 * 3600)); 
+        m_lat = 51.268;
+        m_lon = -0.321;
+        timeoffset = FixedOffset::east(1 * 3600);
     }
     else if loc == "Preveza" { 
-        let m_lat = 38.95;
-        let m_lon = 20.73;
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(3 * 3600)); 
+        m_lat = 38.95;
+        m_lon = 20.73;
+        timeoffset = FixedOffset::east(3 * 3600);
     }
     else if loc == "Castlegregory" {
-        let m_lat = 52.255549;
-        let m_lon = -10.02099; 
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(1 * 3600)); 
+        m_lat = 52.255549;
+        m_lon = -10.02099; 
+        timeoffset = FixedOffset::east(1 * 3600);
     }
     else if loc == "Casa" { 
-        let m_lat = 41.895556;
-        let m_lon = 2.806389;
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::east(2 * 3600)); 
+        m_lat = 41.895556;
+        m_lon = 2.806389;
+        timeoffset = FixedOffset::east(2 * 3600);
     }
     else if loc == "Austin" {
-        let m_lat = 30.267222;
-        let m_lon = -97.743056;       
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(5 * 3600));
+        m_lat = 30.267222;
+        m_lon = -97.743056; 
+        timeoffset = FixedOffset::west(5 * 3600);      
     }
     else if loc == "Cary" {
-        let m_lat = 35.791667;
-        let m_lon = -78.781111;        
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(4 * 3600));
+        m_lat = 35.791667;
+        m_lon = -78.781111;     
+        timeoffset = FixedOffset::west(4 * 3600);   
     }
     else if loc == "Black_Forest" {
-        let m_lat = 39.060825;
-        let m_lon = -104.67525;
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(6 * 3600));
+        m_lat = 39.060825;
+        m_lon = -104.67525;
+        timeoffset = FixedOffset::west(6 * 3600);
     }
     else if loc == "Hoopa" {
-        let m_lat = 41.050278;
-        let m_lon = -123.674167;
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), FixedOffset::west(7 * 3600));
+        m_lat = 41.050278;
+        m_lon = -123.674167;
+        timeoffset = FixedOffset::west(7 * 3600);
     }
-    else {
-        return (lat, lon, format!("[{},{}]", lat, lon), FixedOffset::west(0));
-    };
+
+    return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), timeoffset);
 }
 
 fn print_current(current:Current, location:String, timezone:FixedOffset) {
@@ -146,6 +149,11 @@ fn main() -> Result<()> {
    let yesterday_unix = yesterday.timestamp();
 
    let latlonloc = get_latlonloc(latitude, longitude, location);
+
+   if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
+        bail!("Location '{}' is not recognized, and both lattitude and longitude are zero.", latlonloc.2);
+   }
+
    let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
     
    print_current(api_result.current, latlonloc.2, latlonloc.3);
