@@ -12,3 +12,6 @@ Where:
 - `--days` = number of decimal days between zero and five to subtract from present time
 - `--utc`= [optional] offset from UTC, otherwise time displayed in UTC
 - `--api_key` = the OpenWeather API key
+
+In the screenshot below the `--api_key` has been defined by default in the code:
+![alt text](docs/Austin_TX.png)
