@@ -17,16 +17,24 @@ struct Opt {
     loc: Option<String>,
 
     #[structopt(long)]
+    utc: Option<i32>,
+
+    #[structopt(long)]
     days: f64,
-    
+     
     #[structopt(long, default_value = "MY_API_KEY")]
     api_key: String
 }
 
-fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String, FixedOffset) {
+fn get_latlonloc(lat:f64, lon:f64, loc:String, time:i32) -> (f64, f64, String, Option<FixedOffset>) {
     let mut m_lat = lat;
     let mut m_lon = lon;
-    let mut timeoffset = FixedOffset::west(0);
+    let mut timeoffset = if time < 0 {
+        FixedOffset::west((time * -1) * 3600)
+    }
+    else {
+        FixedOffset::east(time * 3600)
+    };
 
     if loc == "Mickleham" {
         m_lat = 51.268;
@@ -68,12 +76,22 @@ fn get_latlonloc(lat:f64, lon:f64, loc:String) -> (f64, f64, String, FixedOffset
         m_lon = -123.674167;
         timeoffset = FixedOffset::west(7 * 3600);
     }
+    else if time == 0 {
+        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None); 
+    }
 
-    return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), timeoffset);
+    return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), Some(timeoffset));
 }
 
-fn print_current(current:Current, location:String, timezone:FixedOffset) {
-    println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0).with_timezone(&timezone));
+fn print_current(current:Current, location:String, timezone:Option<FixedOffset>) {
+    match timezone {
+        Some(timezone) => {
+            println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0).with_timezone(&timezone));
+        }
+        None => {
+            println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0));
+        }
+    }
     for elem in current.weather {
         println!("Short weather: {}", elem.main);
         println!("Weather description: {}", elem.description);
@@ -118,8 +136,16 @@ fn print_current(current:Current, location:String, timezone:FixedOffset) {
         }
         None => {}
     }
-    println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0).with_timezone(&timezone));
-    println!("Sunset: {}", Utc.timestamp(current.sunset, 0).with_timezone(&timezone));
+    match timezone {
+        Some(timezone) => {
+            println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0).with_timezone(&timezone));
+            println!("Sunset: {}", Utc.timestamp(current.sunset, 0).with_timezone(&timezone));
+        }
+        None => {
+            println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0));
+            println!("Sunset: {}", Utc.timestamp(current.sunset, 0));
+        }
+    }
     println!("UV Index: {}", current.uvi);
     println!("Visibility: {}m", current.visibility);
     println!("Wind degrees: {}º", current.wind_deg);
@@ -146,7 +172,7 @@ fn main() -> Result<()> {
    let yesterday = now.checked_sub_signed(Duration::seconds(seconds.round() as i64)).unwrap();
    let yesterday_unix = yesterday.timestamp();
 
-   let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location);
+   let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location, opt.utc.unwrap_or_default());
 
    if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
         bail!("Location '{}' is not recognized, and both latitude and longitude are zero.", latlonloc.2);
