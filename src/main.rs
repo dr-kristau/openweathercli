@@ -3,6 +3,39 @@ use structopt::StructOpt;
 use anyhow::{Result, bail};
 //use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use chrono::{Utc, Duration, TimeZone, FixedOffset};
+use serde_derive::{Deserialize};
+
+#[derive(Debug,Deserialize)]
+struct Zone {
+    zone_id:i64,
+    country_code:String,
+    zone_name:String
+}
+
+#[derive(Debug,Deserialize)]
+struct TimeZoneCSV {
+    zone_id:i64,
+    abbreviation:String,
+    time_start:i64,
+    gmt_offset:i64,
+    dst:i32
+}
+
+#[derive(Debug,Deserialize)]
+struct WordCities {
+    city: String,
+    city_ascii: String,
+    lat: f64,
+    lng: f64,
+    country:String,
+    iso2:String,
+    iso3:String,
+    admin_name:String,
+    capital:String,
+    population:Option<f64>,
+    id:i64
+}
+
 
 #[derive(StructOpt)]
 struct Opt {
@@ -158,6 +191,133 @@ fn print_current(current:Current, location:String, timezone:Option<FixedOffset>)
     println!("Wind speed: {}m/s", current.wind_speed);
 }
 
+fn load_zone() -> Result<Vec<Zone>> {
+    let bytes = std::include_bytes!("data/zone.csv");
+    let mut vec = Vec::new();
+    
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(bytes.as_ref()); 
+
+    for result in rdr.deserialize() {
+        let record: Zone = result?; 
+        vec.push(record);
+    }
+
+    Ok(vec)
+}
+
+fn load_timezone() -> Result<Vec<TimeZoneCSV>> {
+    let bytes = std::include_bytes!("data/timezone.csv");
+    let mut vec = Vec::new();
+    
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(bytes.as_ref()); 
+
+    for result in rdr.deserialize() {
+        let record: TimeZoneCSV = result?; 
+        vec.push(record);
+    }
+
+    Ok(vec)
+}
+
+fn load_cities() -> Result<Vec<WordCities>> {
+    let bytes = std::include_bytes!("data/worldcities.csv");
+    let mut vec = Vec::new();
+    
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_reader(bytes.as_ref()); 
+
+    for result in rdr.deserialize() {
+        let record: WordCities = result?; 
+        vec.push(record);
+    }
+
+    Ok(vec)
+}
+
+fn find_timezone(city:String, country_code:String, unix_time:i64) -> Result<Option<i64>> {
+    match load_zone() {
+        Ok(v) => {
+            let uu = v.into_iter().filter(|y| y.country_code == country_code);
+            let ii = uu.into_iter().find(|y| y.zone_name.ends_with(&city));
+            match ii {
+                Some(ci) => {
+                    match load_timezone() {
+                        Ok(v) => {
+                            let uu = v.into_iter().filter(|y| y.zone_id == ci.zone_id);
+                            let ii = uu.into_iter().find(|y| y.time_start > 0 && y.time_start <= unix_time);
+                            match ii {
+                                Some(ci) => {
+                                    return Ok(Some(ci.gmt_offset / 3600));
+                                }
+                                None => {  
+                                    return Ok(None);
+                                }
+                            }
+                        }
+                        Err(e) => bail!("Error {} loading file", e), 
+                    }
+                }
+                None => {  
+                    return Ok(None);
+                }
+            }
+        }
+        Err(e) => bail!("Error {} loading file", e), 
+    }
+} 
+
+fn find_latlong(city:String) -> Result<Option<(f64, f64, String)>> {
+    match load_cities() {
+        Ok(v) => {
+            let uu = v.into_iter().find(|y| y.city == city);
+            match uu {
+                Some(ci) => {
+                    return Ok(Some((ci.lat, ci.lng, ci.iso2)));
+                }
+                None => { return Ok(None); }
+            }
+        }
+        Err(e) => bail!("Error {} loading file", e), 
+    }
+}
+
+fn get_latlon(city:String) -> Result<Option<(f64, f64)>> {
+    match find_latlong(city) {
+        Ok(c) => {
+            match c {
+                Some(ci) => {
+                    return Ok(Some((ci.0, ci.1)));
+                }
+                None => {
+                    return Ok(None); 
+                }
+            }
+        }
+        Err(e) => bail!("Error {} loading file", e)
+    }
+} 
+
+fn get_country_code(city:String) -> Result<Option<String>> {
+    match find_latlong(city) {
+        Ok(c) => {
+            match c {
+                Some(ci) => {
+                    return Ok(Some(ci.2));
+                }
+                None => {
+                    return Ok(None); 
+                }
+            }
+        }
+        Err(e) => bail!("Error {} loading file", e)
+    }
+} 
+
 fn main() -> Result<()> {
    let opt = Opt::from_args();
    let location = opt.loc.unwrap_or_default();
@@ -171,6 +331,28 @@ fn main() -> Result<()> {
    let seconds = days * 24.0 * 60.0 * 60.0;
    let yesterday = now.checked_sub_signed(Duration::seconds(seconds.round() as i64)).unwrap();
    let yesterday_unix = yesterday.timestamp();
+   
+   match get_country_code(location) {
+    Ok(v) => {
+        match v {
+            Some(ci) => {
+                match find_timezone(location, ci, yesterday_unix) {
+                    Ok(c) => {
+                        match c {
+                            Some(cc) => {
+                                println!("TimeZone {}", cc);
+                            }
+                            None => {}
+                        } 
+                    }
+                    Err(e) => bail!("Error {} loading file", e)
+                }
+            }
+            None => {  }
+        }
+        }
+        Err(e) => bail!("Error {} loading file", e), 
+    }
 
    let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location, opt.utc.unwrap_or_default());
 
