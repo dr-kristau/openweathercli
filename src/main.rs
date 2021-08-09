@@ -18,7 +18,7 @@ struct Opt {
 
     #[structopt(long)]
     days: f64,
-
+    
     #[structopt(long, default_value = "MY_API_KEY")]
     api_key: String
 }
@@ -134,8 +134,6 @@ fn print_current(current:Current, location:String, timezone:FixedOffset) {
 
 fn main() -> Result<()> {
    let opt = Opt::from_args();
-   let latitude = opt.lat.unwrap_or_default();
-   let longitude = opt.lon.unwrap_or_default();
    let location = opt.loc.unwrap_or_default();
    let days = opt.days;
 
@@ -148,7 +146,7 @@ fn main() -> Result<()> {
    let yesterday = now.checked_sub_signed(Duration::seconds(seconds.round() as i64)).unwrap();
    let yesterday_unix = yesterday.timestamp();
 
-   let latlonloc = get_latlonloc(latitude, longitude, location);
+   let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location);
 
    if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
         bail!("Location '{}' is not recognized, and both lattitude and longitude are zero.", latlonloc.2);
