@@ -1,7 +1,7 @@
 use openweathermap::*;
 use structopt::StructOpt;
 use anyhow::{Result, bail};
-//use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use chrono::{Utc, Duration, TimeZone, FixedOffset};
 use serde_derive::{Deserialize};
 
@@ -148,7 +148,37 @@ fn get_latlonloc(lat:f64, lon:f64, loc:&String, time:i32, unix:i64) -> Result<(f
     return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), Some(timeoffset)));
 }
 
-fn print_current(current:Current, location:String, timezone:Option<FixedOffset>) {
+fn calc_wetbulb(temp_c:f64, humid:f64)->f64 {
+    temp_c*(0.151977*(humid+8.313659).powf(1.0/2.0)).atan()+(temp_c + humid).atan()-(humid-1.676331).atan()
+    +0.00391838*humid.powf(3.0/2.0)*(0.023101*humid).atan()-4.686035
+}
+
+fn celc_to_far(temp_c:f64)->f64 {
+    (temp_c*1.8)+32.0
+}
+
+fn print_current(current:Current, location:String, timezone:Option<FixedOffset>) -> Result<()> {
+    let wet_bulb_c = calc_wetbulb(current.temp, current.humidity );
+    let wet_bulb_f = celc_to_far(wet_bulb_c);
+
+    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+
+    if wet_bulb_f <= 80.0 {
+        stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
+    }
+    else if wet_bulb_f <= 85.0 {
+        stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
+    }
+    else if wet_bulb_f <= 88.0 {
+        stdout.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
+    }
+    else if wet_bulb_f <= 90.0 {
+        stdout.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
+    }
+    else if wet_bulb_f > 90.0 {
+        stdout.set_color(ColorSpec::new().set_fg(Some(Color::Blue)))?;
+    }
+
     match timezone {
         Some(timezone) => {
             println!("Weather for {} on {}", location, Utc.timestamp(current.dt, 0).with_timezone(&timezone));
@@ -167,6 +197,7 @@ fn print_current(current:Current, location:String, timezone:Option<FixedOffset>)
     println!("Cloud cover: {}%", current.clouds);
     println!("Dew Point: {}ºC", current.dew_point);
     println!("Heat Index: {}ºC", current.feels_like);
+    println!("Wet Bulb: {:.2}ºC", wet_bulb_c);
     match current.snow {
         Some(snow) => {
             match snow.h1 {
@@ -243,6 +274,10 @@ fn print_current(current:Current, location:String, timezone:Option<FixedOffset>)
         None => {}
     }
     println!("Wind speed: {}m/s", current.wind_speed);
+
+    stdout.reset()?;
+
+    return Ok(());
 }
 
 fn load_zone() -> Result<Vec<Zone>> {
@@ -367,7 +402,12 @@ fn main() -> Result<()> {
     
             let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
         
-            print_current(api_result.current, latlonloc.2, latlonloc.3);
+            match print_current(api_result.current, latlonloc.2, latlonloc.3) {
+                Ok(()) => {}
+                Err(e) => {
+                    bail!("Error {}", e);
+                }
+            }
        }
        Err(e) => {
             bail!("Error {}", e);
