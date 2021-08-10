@@ -14,6 +14,9 @@ Using worldcities.csv from [simplemaps](https://simplemaps.com/data/world-cities
 In the screenshot below the `--api_key` has been defined by default in the code:
 ![alt text](docs/Los_Angeles.png)
 
+The wet-bulb temperature color code the text for risk, as documented in [simple_wet_bulb](https://github.com/Dr-Kristau/simple_wet_bulb).
+![alt text](docs/Dubai.png)
+
 Manual
 ------
 ```bash
