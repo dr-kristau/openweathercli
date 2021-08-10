@@ -22,9 +22,9 @@
             "args": [
                 //"--lat=30.267222",
                 //"--lon=-97.743056",
-                "--loc=Austin_TX",
-                "--days=0.5",
-                "--utc=-4"
+                "--loc=London",
+                "--days=0",
+                //"--utc=-4"
             ],
             "cwd": "${workspaceFolder}"
         },

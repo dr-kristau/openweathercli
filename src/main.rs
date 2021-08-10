@@ -17,7 +17,7 @@ struct TimeZoneCSV {
     zone_id:i64,
     abbreviation:String,
     time_start:i64,
-    gmt_offset:i64,
+    gmt_offset:i32,
     dst:i32
 }
 
@@ -54,12 +54,12 @@ struct Opt {
 
     #[structopt(long)]
     days: f64,
-     
+    
     #[structopt(long, default_value = "MY_API_KEY")]
     api_key: String
 }
 
-fn get_latlonloc(lat:f64, lon:f64, loc:String, time:i32) -> (f64, f64, String, Option<FixedOffset>) {
+fn get_latlonloc(lat:f64, lon:f64, loc:&String, time:i32, unix:i64) -> Result<(f64, f64, String, Option<FixedOffset>)> {
     let mut m_lat = lat;
     let mut m_lon = lon;
     let mut timeoffset = if time < 0 {
@@ -109,11 +109,43 @@ fn get_latlonloc(lat:f64, lon:f64, loc:String, time:i32) -> (f64, f64, String, O
         m_lon = -123.674167;
         timeoffset = FixedOffset::west(7 * 3600);
     }
-    else if time == 0 {
-        return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None); 
+    else if m_lat == 0.0 && m_lon == 0.0 {
+        match find_latlong(loc) {
+            Ok(l) => {
+                match l {
+                    Some(latlon) => {
+                        m_lat = latlon.0;
+                        m_lon = latlon.1;
+                    }
+                    None => {}
+                } 
+            }
+            Err(e) => bail!("Error {} loading file", e)
+        }
+        if time == 0 {
+            match find_timezone(loc, unix) {
+                Ok(tz) => {
+                    match tz {
+                        Some(timezone) => {
+                            if timezone < 0 {
+                                timeoffset = FixedOffset::west((timezone * -1) * 3600);
+                            }
+                            else {
+                                timeoffset = FixedOffset::east(timezone * 3600);
+                            }
+                            
+                        }
+                        None => {
+                            return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None));
+                        }
+                    } 
+                }
+                Err(e) => bail!("Error {} loading file", e)
+            }
+        }
     }
 
-    return (m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), Some(timeoffset));
+    return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), Some(timeoffset)));
 }
 
 fn print_current(current:Current, location:String, timezone:Option<FixedOffset>) {
@@ -170,13 +202,35 @@ fn print_current(current:Current, location:String, timezone:Option<FixedOffset>)
         None => {}
     }
     match timezone {
-        Some(timezone) => {
-            println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0).with_timezone(&timezone));
-            println!("Sunset: {}", Utc.timestamp(current.sunset, 0).with_timezone(&timezone));
+        Some(tz) => {
+            match current.sunrise {
+                Some(sunrise) => {
+                    println!("Sunrise: {}", Utc.timestamp(sunrise, 0).with_timezone(&tz));
+                }
+                None => {}
+            }
+            
+            match current.sunset {
+                Some(sunset) => {
+                    println!("Sunrise: {}", Utc.timestamp(sunset, 0).with_timezone(&tz));
+                }
+                None => {}
+            }
         }
         None => {
-            println!("Sunrise: {}", Utc.timestamp(current.sunrise, 0));
-            println!("Sunset: {}", Utc.timestamp(current.sunset, 0));
+            match current.sunrise {
+                Some(sunrise) => {
+                    println!("Sunrise: {}", Utc.timestamp(sunrise, 0));
+                }
+                None => {}
+            }
+            
+            match current.sunset {
+                Some(sunset) => {
+                    println!("Sunrise: {}", Utc.timestamp(sunset, 0));
+                }
+                None => {}
+            }
         }
     }
     println!("UV Index: {}", current.uvi);
@@ -239,18 +293,22 @@ fn load_cities() -> Result<Vec<WordCities>> {
     Ok(vec)
 }
 
-fn find_timezone(city:String, country_code:String, unix_time:i64) -> Result<Option<i64>> {
+fn find_timezone(city:&String, unix_time:i64) -> Result<Option<i32>> {
+    let no_space_city = city.replace(" ", "_");
     match load_zone() {
         Ok(v) => {
-            let uu = v.into_iter().filter(|y| y.country_code == country_code);
-            let ii = uu.into_iter().find(|y| y.zone_name.ends_with(&city));
+            let ii = v.into_iter().find(|y| y.zone_name.ends_with(&no_space_city));
             match ii {
                 Some(ci) => {
                     match load_timezone() {
                         Ok(v) => {
-                            let uu = v.into_iter().filter(|y| y.zone_id == ci.zone_id);
-                            let ii = uu.into_iter().find(|y| y.time_start > 0 && y.time_start <= unix_time);
-                            match ii {
+                            let mut ww: Vec<TimeZoneCSV> = v.into_iter()
+                                .filter(|y| y.zone_id == ci.zone_id)
+                                .collect();
+
+                            ww.sort_by(|a, b| b.time_start.cmp(&a.time_start));
+                            let uu = ww.iter().find(|z| z.time_start <= unix_time);
+                            match uu {
                                 Some(ci) => {
                                     return Ok(Some(ci.gmt_offset / 3600));
                                 }
@@ -271,13 +329,13 @@ fn find_timezone(city:String, country_code:String, unix_time:i64) -> Result<Opti
     }
 } 
 
-fn find_latlong(city:String) -> Result<Option<(f64, f64, String)>> {
+fn find_latlong(city:&String) -> Result<Option<(f64, f64)>> {
     match load_cities() {
         Ok(v) => {
-            let uu = v.into_iter().find(|y| y.city == city);
+            let uu = v.into_iter().find(|y| &y.city == city);
             match uu {
                 Some(ci) => {
-                    return Ok(Some((ci.lat, ci.lng, ci.iso2)));
+                    return Ok(Some((ci.lat, ci.lng)));
                 }
                 None => { return Ok(None); }
             }
@@ -286,41 +344,10 @@ fn find_latlong(city:String) -> Result<Option<(f64, f64, String)>> {
     }
 }
 
-fn get_latlon(city:String) -> Result<Option<(f64, f64)>> {
-    match find_latlong(city) {
-        Ok(c) => {
-            match c {
-                Some(ci) => {
-                    return Ok(Some((ci.0, ci.1)));
-                }
-                None => {
-                    return Ok(None); 
-                }
-            }
-        }
-        Err(e) => bail!("Error {} loading file", e)
-    }
-} 
-
-fn get_country_code(city:String) -> Result<Option<String>> {
-    match find_latlong(city) {
-        Ok(c) => {
-            match c {
-                Some(ci) => {
-                    return Ok(Some(ci.2));
-                }
-                None => {
-                    return Ok(None); 
-                }
-            }
-        }
-        Err(e) => bail!("Error {} loading file", e)
-    }
-} 
 
 fn main() -> Result<()> {
    let opt = Opt::from_args();
-   let location = opt.loc.unwrap_or_default();
+   let location = &opt.loc.unwrap_or_default();
    let days = opt.days;
 
    if days < 0.0 || days > 5.0 {
@@ -331,38 +358,21 @@ fn main() -> Result<()> {
    let seconds = days * 24.0 * 60.0 * 60.0;
    let yesterday = now.checked_sub_signed(Duration::seconds(seconds.round() as i64)).unwrap();
    let yesterday_unix = yesterday.timestamp();
-   
-   match get_country_code(location) {
-    Ok(v) => {
-        match v {
-            Some(ci) => {
-                match find_timezone(location, ci, yesterday_unix) {
-                    Ok(c) => {
-                        match c {
-                            Some(cc) => {
-                                println!("TimeZone {}", cc);
-                            }
-                            None => {}
-                        } 
-                    }
-                    Err(e) => bail!("Error {} loading file", e)
-                }
+
+   match get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location, opt.utc.unwrap_or_default(), yesterday_unix) {
+       Ok(latlonloc) => {
+            if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
+                bail!("Location '{}' is not recognized, and both latitude and longitude are zero.", latlonloc.2);
             }
-            None => {  }
-        }
-        }
-        Err(e) => bail!("Error {} loading file", e), 
-    }
-
-   let latlonloc = get_latlonloc(opt.lat.unwrap_or_default(), opt.lon.unwrap_or_default(), location, opt.utc.unwrap_or_default());
-
-   if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
-        bail!("Location '{}' is not recognized, and both latitude and longitude are zero.", latlonloc.2);
-   }
-
-   let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
     
-   print_current(api_result.current, latlonloc.2, latlonloc.3);
+            let api_result = blocking::timemachine(&latlonloc.0, &latlonloc.1, &yesterday_unix, "metric", "en", &opt.api_key).unwrap();
+        
+            print_current(api_result.current, latlonloc.2, latlonloc.3);
+       }
+       Err(e) => {
+            bail!("Error {}", e);
+       }
+   }
 
    Ok(())
 }
