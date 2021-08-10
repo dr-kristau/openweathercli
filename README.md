@@ -2,6 +2,20 @@
 A small cli app using the [openweathermap fork](https://github.com/Dr-Kristau/openweathermap)
 
 Usage:
+
+Automatic
+---------
+```bash
+openweathercli --loc="Los Angeles" --days 0.5 --api_key <MY_API_KEY>
+```
+
+Using worldcities.csv from [simplemaps](https://simplemaps.com/data/world-cities) for latitude and longitude, and zone.csv and timezone.csv from [timezonedb](https://timezonedb.com/download), most big cities can be found automatically using only `--loc` and `--days`.
+
+In the screenshot below the `--api_key` has been defined by default in the code:
+![alt text](docs/Los_Angeles.png)
+
+Manual
+------
 ```bash
 openweathercli --lat 30.267222 --lon=-97.743056 --loc Austin_TX --days 0.5 --utc=-5 --api_key <MY_API_KEY>
 ```
