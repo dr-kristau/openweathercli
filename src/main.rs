@@ -85,8 +85,8 @@ fn get_latlonloc(lat:f64, lon:f64, loc:&String, time:i32, unix:i64) -> Result<(f
         timeoffset = FixedOffset::east(1 * 3600);
     }
     else if loc == "Casa" { 
-        m_lat = 41.895556;
-        m_lon = 2.806389;
+        m_lat = 41.900833;
+        m_lon = 2.760556;
         timeoffset = FixedOffset::east(2 * 3600);
     }
     else if loc == "Austin" {
