@@ -17,6 +17,11 @@ In the screenshot below the `--api_key` has been defined by default in the code:
 The wet-bulb temperature color code the text for risk, as documented in [simple_wet_bulb](https://github.com/Dr-Kristau/simple_wet_bulb).
 ![alt text](docs/Dubai.png)
 
+To count in hours rather than fractions of days, we can use:
+```bash
+openweathercli --loc="Los Angeles" --days=$(bc -l <<< '12/24') --api_key <MY_API_KEY>
+```
+
 Semi-Automatic
 ---------
 Given that worldcities.csv has a more extensive collection of municipalities than timezone.csv, there are a number of municipalities with no corresponding timezone, which results in output in UTC.
