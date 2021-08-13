@@ -59,7 +59,7 @@ struct Opt {
     api_key: String
 }
 
-fn get_latlonloc(lat:f64, lon:f64, loc:&String, time:i32, unix:i64) -> Result<(f64, f64, String, Option<FixedOffset>)> {
+fn get_latlonloc(lat:f64, lon:f64, loc:&str, time:i32, unix:i64) -> Result<(f64, f64, String, Option<FixedOffset>)> {
     let mut m_lat = lat;
     let mut m_lon = lon;
     let mut timeoffset = if time < 0 {
@@ -109,16 +109,18 @@ fn get_latlonloc(lat:f64, lon:f64, loc:&String, time:i32, unix:i64) -> Result<(f
         m_lon = -123.674167;
         timeoffset = FixedOffset::west(7 * 3600);
     }
+    else if loc == "Iznájar" {
+        m_lat = 37.256726;
+        m_lon = -4.310091;
+        timeoffset = FixedOffset::east(2 * 3600);
+    }    
     else if m_lat == 0.0 && m_lon == 0.0 {
         match find_latlong(loc) {
             Ok(l) => {
-                match l {
-                    Some(latlon) => {
-                        m_lat = latlon.0;
-                        m_lon = latlon.1;
-                    }
-                    None => {}
-                } 
+                if let Some(latlon) = l {
+                    m_lat = latlon.0;
+                    m_lon = latlon.1;                   
+                }
             }
             Err(e) => bail!("Error {} loading file", e)
         }
@@ -198,80 +200,48 @@ fn print_current(current:Current, location:String, timezone:Option<FixedOffset>)
     println!("Dew Point: {}ºC", current.dew_point);
     println!("Heat Index: {}ºC", current.feels_like);
     println!("Wet Bulb: {:.2}ºC", wet_bulb_c);
-    match current.snow {
-        Some(snow) => {
-            match snow.h1 {
-                Some(h1) => {
-                    println!("Snow one-hour: {}mm", h1);
-                }
-                None => {}
-            }
-            match snow.h3 {
-                Some(h3) => {
-                    println!("Snow three-hour: {}mm", h3);
-                }
-                None => {}
-            }
+    if let Some(snow) = current.snow {
+        if let Some(h1) = snow.h1 {
+            println!("Snow one-hour: {}mm", h1);
         }
-        None => {}
-    };
-    match current.rain {
-        Some(rain) => {
-            match rain.h1 {
-                Some(h1) => {
-                    println!("Rain one-hour: {}mm", h1);
-                }
-                None => {}
-            }
-            match rain.h3 {
-                Some(h3) => {
-                    println!("Rain three-hour: {}mm", h3);
-                }
-                None => {}
-            }
+        if let Some(h3) = snow.h3 {
+            println!("Snow three-hour: {}mm", h3);
         }
-        None => {}
     }
+
+    if let Some(rain) = current.rain {
+        if let Some(h1) = rain.h1 {
+            println!("Rain one-hour: {}mm", h1);
+        }
+        if let Some(h3) = rain.h3 {
+            println!("Rain three-hour: {}mm", h3);
+        }
+    }
+
     match timezone {
         Some(tz) => {
-            match current.sunrise {
-                Some(sunrise) => {
-                    println!("Sunrise: {}", Utc.timestamp(sunrise, 0).with_timezone(&tz));
-                }
-                None => {}
+            if let Some(sunrise) = current.sunrise {
+                println!("Sunrise: {}", Utc.timestamp(sunrise, 0).with_timezone(&tz));
             }
-            
-            match current.sunset {
-                Some(sunset) => {
-                    println!("Sunrise: {}", Utc.timestamp(sunset, 0).with_timezone(&tz));
-                }
-                None => {}
+            if let Some(sunset) = current.sunset {
+                println!("Sunrise: {}", Utc.timestamp(sunset, 0).with_timezone(&tz));
             }
         }
         None => {
-            match current.sunrise {
-                Some(sunrise) => {
-                    println!("Sunrise: {}", Utc.timestamp(sunrise, 0));
-                }
-                None => {}
+            if let Some(sunrise) = current.sunrise {
+                println!("Sunrise: {}", Utc.timestamp(sunrise, 0));
             }
-            
-            match current.sunset {
-                Some(sunset) => {
-                    println!("Sunrise: {}", Utc.timestamp(sunset, 0));
-                }
-                None => {}
+            if let Some(sunset) = current.sunset {
+                println!("Sunrise: {}", Utc.timestamp(sunset, 0));
             }
         }
     }
     println!("UV Index: {}", current.uvi);
     println!("Visibility: {}m", current.visibility);
     println!("Wind degrees: {}º", current.wind_deg);
-    match current.wind_gust {
-        Some(gust) => {
-            println!("Wind gust: {}m/s", gust); 
-        }
-        None => {}
+
+    if let Some(gust) = current.wind_gust {
+        println!("Wind gust: {}m/s", gust);
     }
     println!("Wind speed: {}m/s", current.wind_speed);
 
@@ -328,7 +298,7 @@ fn load_cities() -> Result<Vec<WordCities>> {
     Ok(vec)
 }
 
-fn find_timezone(city:&String, unix_time:i64) -> Result<Option<i32>> {
+fn find_timezone(city:&str, unix_time:i64) -> Result<Option<i32>> {
     let no_space_city = city.replace(" ", "_");
     match load_zone() {
         Ok(v) => {
@@ -364,7 +334,7 @@ fn find_timezone(city:&String, unix_time:i64) -> Result<Option<i32>> {
     }
 } 
 
-fn find_latlong(city:&String) -> Result<Option<(f64, f64)>> {
+fn find_latlong(city:&str) -> Result<Option<(f64, f64)>> {
     match load_cities() {
         Ok(v) => {
             let uu = v.into_iter().find(|y| &y.city == city);
