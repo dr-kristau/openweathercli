@@ -367,42 +367,33 @@ fn main() -> Result<()> {
         .unwrap();
     let yesterday_unix = yesterday.timestamp();
 
-    match get_latlonloc(
+    let latlonloc = get_latlonloc(
         opt.lat.unwrap_or_default(),
         opt.lon.unwrap_or_default(),
         location,
         opt.utc.unwrap_or_default(),
         yesterday_unix,
-    ) {
-        Ok(latlonloc) => {
-            if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
-                bail!(
-                    "Location '{}' is not recognized, and both latitude and longitude are zero.",
-                    latlonloc.2
-                );
-            }
+    )
+    .unwrap();
 
-            let api_result = blocking::timemachine(
-                &latlonloc.0,
-                &latlonloc.1,
-                &yesterday_unix,
-                "metric",
-                "en",
-                &opt.api_key,
-            )
-            .unwrap();
-
-            match print_current(api_result.current, latlonloc.2, latlonloc.3) {
-                Ok(()) => {}
-                Err(e) => {
-                    bail!("Error {}", e);
-                }
-            }
-        }
-        Err(e) => {
-            bail!("Error {}", e);
-        }
+    if latlonloc.0 == 0.0 && latlonloc.1 == 0.0 {
+        bail!(
+            "Location '{}' is not recognized, and both latitude and longitude are zero.",
+            latlonloc.2
+        );
     }
+
+    let api_result = blocking::timemachine(
+        &latlonloc.0,
+        &latlonloc.1,
+        &yesterday_unix,
+        "metric",
+        "en",
+        &opt.api_key,
+    )
+    .expect("Error from OpenWeather Server");
+
+    print_current(api_result.current, latlonloc.2, latlonloc.3).unwrap();
 
     Ok(())
 }
