@@ -72,42 +72,60 @@ fn get_latlonloc(
         FixedOffset::east(time * 3600)
     };
 
+    let match_timezone = |city: &str| -> Result<FixedOffset> {
+        match find_timezone(city, unix) {
+            Ok(tz) => match tz {
+                Some(timezone) => {
+                    if timezone < 0 {
+                        return Ok(FixedOffset::west((timezone * -1) * 3600));
+                    } else {
+                        return Ok(FixedOffset::east(timezone * 3600));
+                    }
+                }
+                None => {
+                    return Ok(timeoffset);
+                }
+            },
+            Err(e) => bail!("Error {} loading file", e),
+        }
+    };
+
     if loc == "Mickleham" {
         m_lat = 51.268;
         m_lon = -0.321;
-        timeoffset = FixedOffset::east(1 * 3600);
+        timeoffset = match_timezone("London").unwrap();
     } else if loc == "Preveza" {
         m_lat = 38.95;
         m_lon = 20.73;
-        timeoffset = FixedOffset::east(3 * 3600);
+        timeoffset = match_timezone("Athens").unwrap();
     } else if loc == "Castlegregory" {
         m_lat = 52.255549;
         m_lon = -10.02099;
-        timeoffset = FixedOffset::east(1 * 3600);
+        timeoffset = match_timezone("Dublin").unwrap();
     } else if loc == "Casa" {
         m_lat = 41.900833;
         m_lon = 2.760556;
-        timeoffset = FixedOffset::east(2 * 3600);
+        timeoffset = match_timezone("Madrid").unwrap();
     } else if loc == "Austin" {
         m_lat = 30.267222;
         m_lon = -97.743056;
-        timeoffset = FixedOffset::west(5 * 3600);
+        timeoffset = match_timezone("Chicago").unwrap();
     } else if loc == "Cary" {
         m_lat = 35.791667;
         m_lon = -78.781111;
-        timeoffset = FixedOffset::west(4 * 3600);
+        timeoffset = match_timezone("New_York").unwrap();
     } else if loc == "Black_Forest" {
         m_lat = 39.060825;
         m_lon = -104.67525;
-        timeoffset = FixedOffset::west(6 * 3600);
+        timeoffset = match_timezone("Denver").unwrap();
     } else if loc == "Hoopa" {
         m_lat = 41.050278;
         m_lon = -123.674167;
-        timeoffset = FixedOffset::west(7 * 3600);
+        timeoffset = match_timezone("Los_Angeles").unwrap();
     } else if loc == "Iznájar" {
         m_lat = 37.256726;
         m_lon = -4.310091;
-        timeoffset = FixedOffset::east(2 * 3600);
+        timeoffset = match_timezone("Madrid").unwrap();
     } else if m_lat == 0.0 && m_lon == 0.0 {
         match find_latlong(loc) {
             Ok(l) => {
