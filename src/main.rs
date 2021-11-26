@@ -122,9 +122,9 @@ fn get_latlonloc(
         m_lat = 41.050278;
         m_lon = -123.674167;
         timeoffset = match_timezone("Los_Angeles").unwrap();
-    } else if loc == "Iznájar" {
-        m_lat = 37.256726;
-        m_lon = -4.310091;
+    } else if loc == "Coín" {
+        m_lat = 36.6589;
+        m_lon = -4.757;
         timeoffset = match_timezone("Madrid").unwrap();
     } else if m_lat == 0.0 && m_lon == 0.0 {
         match find_latlong(loc) {
