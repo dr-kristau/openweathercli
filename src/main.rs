@@ -243,7 +243,7 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
                 println!("Sunrise: {}", Utc.timestamp(sunrise, 0).with_timezone(&tz));
             }
             if let Some(sunset) = current.sunset {
-                println!("Sunrise: {}", Utc.timestamp(sunset, 0).with_timezone(&tz));
+                println!("Sunset: {}", Utc.timestamp(sunset, 0).with_timezone(&tz));
             }
         }
         None => {
@@ -251,7 +251,7 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
                 println!("Sunrise: {}", Utc.timestamp(sunrise, 0));
             }
             if let Some(sunset) = current.sunset {
-                println!("Sunrise: {}", Utc.timestamp(sunset, 0));
+                println!("Sunset: {}", Utc.timestamp(sunset, 0));
             }
         }
     }
