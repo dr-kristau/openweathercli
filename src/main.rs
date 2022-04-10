@@ -67,7 +67,7 @@ fn get_latlonloc(
     let mut m_lat = lat;
     let mut m_lon = lon;
     let mut timeoffset = if time < 0 {
-        FixedOffset::west((time * -1) * 3600)
+        FixedOffset::west(-time * 3600)
     } else {
         FixedOffset::east(time * 3600)
     };
@@ -77,13 +77,13 @@ fn get_latlonloc(
             Ok(tz) => match tz {
                 Some(timezone) => {
                     if timezone < 0 {
-                        return Ok(FixedOffset::west((timezone * -1) * 3600));
+                        Ok(FixedOffset::west(-timezone * 3600))
                     } else {
-                        return Ok(FixedOffset::east(timezone * 3600));
+                        Ok(FixedOffset::east(timezone * 3600))
                     }
                 }
                 None => {
-                    return Ok(timeoffset);
+                    Ok(timeoffset)
                 }
             },
             Err(e) => bail!("Error {} loading file", e),
@@ -141,7 +141,7 @@ fn get_latlonloc(
                 Ok(tz) => match tz {
                     Some(timezone) => {
                         if timezone < 0 {
-                            timeoffset = FixedOffset::west((timezone * -1) * 3600);
+                            timeoffset = FixedOffset::west(-timezone * 3600);
                         } else {
                             timeoffset = FixedOffset::east(timezone * 3600);
                         }
@@ -266,7 +266,7 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
 
     stdout.reset()?;
 
-    return Ok(());
+    Ok(())
 }
 
 fn load_zone() -> Result<Vec<Zone>> {
@@ -318,7 +318,7 @@ fn load_cities() -> Result<Vec<WordCities>> {
 }
 
 fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
-    let no_space_city = city.replace(" ", "_");
+    let no_space_city = city.replace(' ', "_");
     match load_zone() {
         Ok(v) => {
             let ii = v
@@ -334,17 +334,17 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
                         let uu = ww.iter().find(|z| z.time_start <= unix_time);
                         match uu {
                             Some(ci) => {
-                                return Ok(Some(ci.gmt_offset / 3600));
+                                Ok(Some(ci.gmt_offset / 3600))
                             }
                             None => {
-                                return Ok(None);
+                                Ok(None)
                             }
                         }
                     }
                     Err(e) => bail!("Error {} loading file", e),
                 },
                 None => {
-                    return Ok(None);
+                    Ok(None)
                 }
             }
         }
@@ -358,10 +358,10 @@ fn find_latlong(city: &str) -> Result<Option<(f64, f64)>> {
             let uu = v.into_iter().find(|y| &y.city == city);
             match uu {
                 Some(ci) => {
-                    return Ok(Some((ci.lat, ci.lng)));
+                    Ok(Some((ci.lat, ci.lng)))
                 }
                 None => {
-                    return Ok(None);
+                    Ok(None)
                 }
             }
         }
@@ -374,7 +374,7 @@ fn main() -> Result<()> {
     let location = &opt.loc.unwrap_or_default();
     let days = opt.days;
 
-    if days < 0.0 || days > 5.0 {
+    if !(0.0..=5.0).contains(&days) {
         bail!("Day offset '{}' not between one and five", days);
     }
 
