@@ -17,7 +17,7 @@ struct TimeZoneCSV {
 }
 
 #[derive(Debug, Deserialize)]
-struct SpaceTimePoint {
+struct CustomPlaces {
     name: String,
     lat: f64,
     lng: f64,
@@ -92,7 +92,7 @@ fn get_latlonloc(
         }
     }
 
-    match find_spacetimepoint(loc) {
+    match find_customplace(loc) {
         Ok(stp) => match stp {
             Some(spacetime) => {
                 m_lat = spacetime.lat;
@@ -248,8 +248,8 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
     Ok(())
 }
 
-fn load_spacetime() -> Result<Vec<SpaceTimePoint>> {
-    let bytes = std::include_bytes!("data/spacetimepoints.csv");
+fn load_customplace() -> Result<Vec<CustomPlaces>> {
+    let bytes = std::include_bytes!("data/customplaces.csv");
     let mut vec = Vec::new();
 
     let mut rdr = csv::ReaderBuilder::new()
@@ -257,7 +257,7 @@ fn load_spacetime() -> Result<Vec<SpaceTimePoint>> {
         .from_reader(bytes.as_ref());
 
     for result in rdr.deserialize() {
-        let record: SpaceTimePoint = result?;
+        let record: CustomPlaces = result?;
         vec.push(record);
     }
 
@@ -296,8 +296,8 @@ fn load_cities() -> Result<Vec<WordCities>> {
     Ok(vec)
 }
 
-fn find_spacetimepoint(loc: &str) -> Result<Option<SpaceTimePoint>> {
-    match load_spacetime() {
+fn find_customplace(loc: &str) -> Result<Option<CustomPlaces>> {
+    match load_customplace() {
         Ok(v) => {
             let uu = v.into_iter().find(|y| &y.name == loc);
             match uu {
