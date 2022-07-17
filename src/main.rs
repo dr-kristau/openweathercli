@@ -6,19 +6,21 @@ use structopt::StructOpt;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct Zone {
     zone_id: i64,
-    //country_code: String,
+    country_code: String,
     zone_name: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct TimeZoneCSV {
     zone_id: i64,
-    //abbreviation: String,
+    abbreviation: String,
     time_start: i64,
     gmt_offset: i32,
-    //dst: i32,
+    dst: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,18 +32,19 @@ struct SpaceTimePoint {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct WordCities {
     city: String,
-    //city_ascii: String,
+    city_ascii: String,
     lat: f64,
     lng: f64,
-    /*country: String,
+    country: String,
     iso2: String,
     iso3: String,
     admin_name: String,
     capital: String,
     population: Option<f64>,
-    id: i64,*/
+    id: i64,
 }
 
 #[derive(StructOpt)]
