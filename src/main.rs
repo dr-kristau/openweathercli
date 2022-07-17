@@ -7,16 +7,9 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
-struct Zone {
-    zone_id: i64,
-    country_code: String,
-    zone_name: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct TimeZoneCSV {
-    zone_id: i64,
+    zone_name: String,
+    country_code: String,
     abbreviation: String,
     time_start: i64,
     gmt_offset: i32,
@@ -271,22 +264,6 @@ fn load_spacetime() -> Result<Vec<SpaceTimePoint>> {
     Ok(vec)
 }
 
-fn load_zone() -> Result<Vec<Zone>> {
-    let bytes = std::include_bytes!("data/zone.csv");
-    let mut vec = Vec::new();
-
-    let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(false)
-        .from_reader(bytes.as_ref());
-
-    for result in rdr.deserialize() {
-        let record: Zone = result?;
-        vec.push(record);
-    }
-
-    Ok(vec)
-}
-
 fn load_timezone() -> Result<Vec<TimeZoneCSV>> {
     let bytes = std::include_bytes!("data/timezone.csv");
     let mut vec = Vec::new();
@@ -332,29 +309,18 @@ fn find_spacetimepoint(loc: &str) -> Result<Option<SpaceTimePoint>> {
     }
 }
 
-
 fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
     let no_space_city = city.replace(' ', "_");
-    match load_zone() {
-        Ok(v) => {
-            let ii = v
-                .into_iter()
-                .find(|y| y.zone_name.ends_with(&no_space_city));
-            match ii {
-                Some(ci) => match load_timezone() {
-                    Ok(v) => {
-                        let mut ww: Vec<TimeZoneCSV> =
-                            v.into_iter().filter(|y| y.zone_id == ci.zone_id).collect();
 
-                        ww.sort_by(|a, b| b.time_start.cmp(&a.time_start));
-                        let uu = ww.iter().find(|z| z.time_start <= unix_time);
-                        match uu {
-                            Some(ci) => Ok(Some(ci.gmt_offset / 3600)),
-                            None => Ok(None),
-                        }
-                    }
-                    Err(e) => bail!("Error {} loading file", e),
-                },
+    match load_timezone() {
+        Ok(v) => {
+            let mut ww: Vec<TimeZoneCSV> =
+                v.into_iter().filter(|y| y.zone_name.ends_with(&no_space_city)).collect();
+
+            ww.sort_by(|a, b| b.time_start.cmp(&a.time_start));
+            let uu = ww.iter().find(|z| z.time_start <= unix_time);
+            match uu {
+                Some(ci) => Ok(Some(ci.gmt_offset / 3600)),
                 None => Ok(None),
             }
         }
