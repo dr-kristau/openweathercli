@@ -8,32 +8,40 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 #[derive(Debug, Deserialize)]
 struct Zone {
     zone_id: i64,
-    country_code: String,
+    //country_code: String,
     zone_name: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct TimeZoneCSV {
     zone_id: i64,
-    abbreviation: String,
+    //abbreviation: String,
     time_start: i64,
     gmt_offset: i32,
-    dst: i32,
+    //dst: i32,
+}
+
+#[derive(Debug, Deserialize)]
+struct SpaceTimePoint {
+    name: String,
+    lat: f64,
+    lng: f64,
+    time_zone: String
 }
 
 #[derive(Debug, Deserialize)]
 struct WordCities {
     city: String,
-    city_ascii: String,
+    //city_ascii: String,
     lat: f64,
     lng: f64,
-    country: String,
+    /*country: String,
     iso2: String,
     iso3: String,
     admin_name: String,
     capital: String,
     population: Option<f64>,
-    id: i64,
+    id: i64,*/
 }
 
 #[derive(StructOpt)]
@@ -72,8 +80,8 @@ fn get_latlonloc(
         FixedOffset::east(time * 3600)
     };
 
-    let match_timezone = |city: &str| -> Result<FixedOffset> {
-        match find_timezone(city, unix) {
+    fn match_timezone(city: &str, ux: i64, tos: FixedOffset) -> Result<FixedOffset> {
+        match find_timezone(city, ux) {
             Ok(tz) => match tz {
                 Some(timezone) => {
                     if timezone < 0 {
@@ -82,78 +90,53 @@ fn get_latlonloc(
                         Ok(FixedOffset::east(timezone * 3600))
                     }
                 }
-                None => {
-                    Ok(timeoffset)
-                }
+                None => Ok(tos),
             },
             Err(e) => bail!("Error {} loading file", e),
         }
-    };
+    }
 
-    if loc == "Mickleham" {
-        m_lat = 51.268;
-        m_lon = -0.321;
-        timeoffset = match_timezone("London").unwrap();
-    } else if loc == "Preveza" {
-        m_lat = 38.95;
-        m_lon = 20.73;
-        timeoffset = match_timezone("Athens").unwrap();
-    } else if loc == "Castlegregory" {
-        m_lat = 52.255549;
-        m_lon = -10.02099;
-        timeoffset = match_timezone("Dublin").unwrap();
-    } else if loc == "Casa" {
-        m_lat = 41.900833;
-        m_lon = 2.760556;
-        timeoffset = match_timezone("Madrid").unwrap();
-    } else if loc == "Austin" {
-        m_lat = 30.267222;
-        m_lon = -97.743056;
-        timeoffset = match_timezone("Chicago").unwrap();
-    } else if loc == "Cary" {
-        m_lat = 35.791667;
-        m_lon = -78.781111;
-        timeoffset = match_timezone("New_York").unwrap();
-    } else if loc == "Black_Forest" {
-        m_lat = 39.060825;
-        m_lon = -104.67525;
-        timeoffset = match_timezone("Denver").unwrap();
-    } else if loc == "Hoopa" {
-        m_lat = 41.050278;
-        m_lon = -123.674167;
-        timeoffset = match_timezone("Los_Angeles").unwrap();
-    } else if loc == "Coín" {
-        m_lat = 36.6589;
-        m_lon = -4.757;
-        timeoffset = match_timezone("Madrid").unwrap();
-    } else if m_lat == 0.0 && m_lon == 0.0 {
-        match find_latlong(loc) {
-            Ok(l) => {
-                if let Some(latlon) = l {
-                    m_lat = latlon.0;
-                    m_lon = latlon.1;
-                }
+    match find_spacetimepoint(loc) {
+        Ok(stp) => match stp {
+            Some(spacetime) => {
+                m_lat = spacetime.lat;
+                m_lon = spacetime.lng;
+                timeoffset = match_timezone(&spacetime.time_zone, unix, timeoffset).unwrap();
             }
-            Err(e) => bail!("Error {} loading file", e),
-        }
-        if time == 0 {
-            match find_timezone(loc, unix) {
-                Ok(tz) => match tz {
-                    Some(timezone) => {
-                        if timezone < 0 {
-                            timeoffset = FixedOffset::west(-timezone * 3600);
-                        } else {
-                            timeoffset = FixedOffset::east(timezone * 3600);
+            None => {
+                if m_lat == 0.0 && m_lon == 0.0 {
+                    match find_latlong(loc) {
+                        Ok(l) => {
+                            if let Some(latlon) = l {
+                                m_lat = latlon.0;
+                                m_lon = latlon.1;
+                            }
+                        }
+                        Err(e) => bail!("Error {} loading file", e),
+                    }
+                    if time == 0 {
+                        match find_timezone(loc, unix) {
+                            Ok(tz) => match tz {
+                                Some(timezone) => {
+                                    if timezone < 0 {
+                                        timeoffset = FixedOffset::west(-timezone * 3600);
+                                    } else {
+                                        timeoffset = FixedOffset::east(timezone * 3600);
+                                    }
+                                }
+                                None => {
+                                    return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None));
+                                }
+                            },
+                            Err(e) => bail!("Error {} loading file", e),
                         }
                     }
-                    None => {
-                        return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None));
-                    }
-                },
-                Err(e) => bail!("Error {} loading file", e),
+                }
             }
         }
+        Err(e) => bail!("Error {} loading file", e),
     }
+
 
     return Ok((
         m_lat,
@@ -269,6 +252,22 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
     Ok(())
 }
 
+fn load_spacetime() -> Result<Vec<SpaceTimePoint>> {
+    let bytes = std::include_bytes!("data/spacetimepoints.csv");
+    let mut vec = Vec::new();
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(bytes.as_ref());
+
+    for result in rdr.deserialize() {
+        let record: SpaceTimePoint = result?;
+        vec.push(record);
+    }
+
+    Ok(vec)
+}
+
 fn load_zone() -> Result<Vec<Zone>> {
     let bytes = std::include_bytes!("data/zone.csv");
     let mut vec = Vec::new();
@@ -317,6 +316,20 @@ fn load_cities() -> Result<Vec<WordCities>> {
     Ok(vec)
 }
 
+fn find_spacetimepoint(loc: &str) -> Result<Option<SpaceTimePoint>> {
+    match load_spacetime() {
+        Ok(v) => {
+            let uu = v.into_iter().find(|y| &y.name == loc);
+            match uu {
+                Some(ci) => Ok(Some(ci)),
+                None => Ok(None),
+            }
+        } 
+        Err(e) => bail!("Error {} loading file", e),
+    }
+}
+
+
 fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
     let no_space_city = city.replace(' ', "_");
     match load_zone() {
@@ -333,19 +346,13 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
                         ww.sort_by(|a, b| b.time_start.cmp(&a.time_start));
                         let uu = ww.iter().find(|z| z.time_start <= unix_time);
                         match uu {
-                            Some(ci) => {
-                                Ok(Some(ci.gmt_offset / 3600))
-                            }
-                            None => {
-                                Ok(None)
-                            }
+                            Some(ci) => Ok(Some(ci.gmt_offset / 3600)),
+                            None => Ok(None),
                         }
                     }
                     Err(e) => bail!("Error {} loading file", e),
                 },
-                None => {
-                    Ok(None)
-                }
+                None => Ok(None),
             }
         }
         Err(e) => bail!("Error {} loading file", e),
@@ -357,12 +364,8 @@ fn find_latlong(city: &str) -> Result<Option<(f64, f64)>> {
         Ok(v) => {
             let uu = v.into_iter().find(|y| &y.city == city);
             match uu {
-                Some(ci) => {
-                    Ok(Some((ci.lat, ci.lng)))
-                }
-                None => {
-                    Ok(None)
-                }
+                Some(ci) => Ok(Some((ci.lat, ci.lng))),
+                None => Ok(None),
             }
         }
         Err(e) => bail!("Error {} loading file", e),
