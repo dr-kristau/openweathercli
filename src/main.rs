@@ -25,6 +25,12 @@ struct CustomPlaces {
 }
 
 #[derive(Debug, Deserialize)]
+struct CustomTimezones {
+    name: String,
+    time_zone: String
+}
+
+#[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct WordCities {
     city: String,
@@ -248,6 +254,22 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
     Ok(())
 }
 
+fn load_customtz() -> Result<Vec<CustomTimezones>> {
+    let bytes = std::include_bytes!("data/customtimezones.csv");
+    let mut vec = Vec::new();
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(bytes.as_ref());
+
+    for result in rdr.deserialize() {
+        let record: CustomTimezones = result?;
+        vec.push(record);
+    }
+
+    Ok(vec)
+}
+
 fn load_customplace() -> Result<Vec<CustomPlaces>> {
     let bytes = std::include_bytes!("data/customplaces.csv");
     let mut vec = Vec::new();
@@ -310,7 +332,20 @@ fn find_customplace(loc: &str) -> Result<Option<CustomPlaces>> {
 }
 
 fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
-    let no_space_city = city.replace(' ', "_");
+    let mut no_space_city = city.replace(' ', "_");
+
+    match load_customtz() {
+        Ok(tz) => {
+            let custom: Option<CustomTimezones> = tz.into_iter().filter(|y| y.name == city).next();
+            match custom {
+                Some(yes) => {
+                    no_space_city = yes.time_zone;
+                },
+                None => ()
+            }
+        }
+        Err(e) => bail!("Error {} loading file", e),
+    }
 
     match load_timezone() {
         Ok(v) => {
@@ -331,7 +366,7 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
 fn find_latlong(city: &str) -> Result<Option<(f64, f64)>> {
     match load_cities() {
         Ok(v) => {
-            let uu = v.into_iter().find(|y| &y.city == city);
+            let uu = v.into_iter().find(|y| (&y.city == city) | (&y.city_ascii == city));
             match uu {
                 Some(ci) => Ok(Some((ci.lat, ci.lng))),
                 None => Ok(None),
