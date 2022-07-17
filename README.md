@@ -9,7 +9,7 @@ Automatic
 openweathercli --loc="Los Angeles" --days 0.5 --api_key <MY_API_KEY>
 ```
 
-Using worldcities.csv from [simplemaps](https://simplemaps.com/data/world-cities) for latitude and longitude, and zone.csv and timezone.csv from [timezonedb](https://timezonedb.com/download) for UTC offsets, most big cities can be found automatically using only `--loc` and `--days`.
+Using worldcities.csv from [simplemaps](https://simplemaps.com/data/world-cities) for latitude and longitude, and timezone.csv from [timezonedb](https://timezonedb.com/download) for UTC offsets, most big cities can be found automatically using only `--loc` and `--days`.
 
 In the screenshot below the `--api_key` has been defined by default in the code:
 ![alt text](docs/Los_Angeles.png)
