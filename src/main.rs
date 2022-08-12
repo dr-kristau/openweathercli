@@ -60,8 +60,11 @@ struct Opt {
     #[structopt(long)]
     utc: Option<i32>,
 
-    #[structopt(long)]
+    #[structopt(long, default_value = "0")]
     days: f64,
+
+    #[structopt(long)]
+    hours: Option<f64>,
 
     #[structopt(long, default_value = "MY_API_KEY")]
     api_key: String,
@@ -380,13 +383,18 @@ fn main() -> Result<()> {
     let opt = Opt::from_args();
     let location = &opt.loc.unwrap_or_default();
     let days = opt.days;
+    let hours = opt.hours.unwrap_or_default();
 
     if !(0.0..=5.0).contains(&days) {
         bail!("Day offset '{}' not between one and five", days);
     }
 
+    if !(0.0..=120.0).contains(&hours) {
+        bail!("Hour offset '{}' not between one and one-hundred and twenty", days);
+    }
+
     let now = Utc::now();
-    let seconds = days * 24.0 * 60.0 * 60.0;
+    let seconds = (days * 24.0 * 60.0 * 60.0) + (hours * 60.0 * 60.0);
     let yesterday = now
         .checked_sub_signed(Duration::seconds(seconds.round() as i64))
         .unwrap();

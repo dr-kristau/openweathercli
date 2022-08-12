@@ -22,8 +22,8 @@
             "args": [
                 //"--lat=30.267222",
                 //"--lon=-97.743056",
-                "--loc=Preveza",
-                "--days=0",
+                "--loc=Casa",
+                "--hours=3",
                 //"--utc=-4"
             ],
             "cwd": "${workspaceFolder}"
