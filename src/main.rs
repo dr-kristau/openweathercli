@@ -21,13 +21,13 @@ struct CustomPlaces {
     name: String,
     lat: f64,
     lng: f64,
-    time_zone: String
+    time_zone: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct CustomTimezones {
     name: String,
-    time_zone: String
+    time_zone: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,7 +130,12 @@ fn get_latlonloc(
                                     }
                                 }
                                 None => {
-                                    return Ok((m_lat, m_lon, format!("{} [{},{}]", loc, m_lat, m_lon), None));
+                                    return Ok((
+                                        m_lat,
+                                        m_lon,
+                                        format!("{} [{},{}]", loc, m_lat, m_lon),
+                                        None,
+                                    ));
                                 }
                             },
                             Err(e) => bail!("Error {} loading file", e),
@@ -138,10 +143,9 @@ fn get_latlonloc(
                     }
                 }
             }
-        }
+        },
         Err(e) => bail!("Error {} loading file", e),
     }
-
 
     Ok((
         m_lat,
@@ -329,7 +333,7 @@ fn find_customplace(loc: &str) -> Result<Option<CustomPlaces>> {
                 Some(ci) => Ok(Some(ci)),
                 None => Ok(None),
             }
-        } 
+        }
         Err(e) => bail!("Error {} loading file", e),
     }
 }
@@ -349,8 +353,10 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
 
     match load_timezone() {
         Ok(v) => {
-            let mut ww: Vec<TimeZoneCSV> =
-                v.into_iter().filter(|y| y.zone_name.ends_with(&no_space_city)).collect();
+            let mut ww: Vec<TimeZoneCSV> = v
+                .into_iter()
+                .filter(|y| y.zone_name.ends_with(&no_space_city))
+                .collect();
 
             ww.sort_by(|a, b| b.time_start.cmp(&a.time_start));
             let uu = ww.iter().find(|z| z.time_start <= unix_time);
@@ -366,7 +372,9 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
 fn find_latlong(city: &str) -> Result<Option<(f64, f64)>> {
     match load_cities() {
         Ok(v) => {
-            let uu = v.into_iter().find(|y| (y.city == city) | (y.city_ascii == city));
+            let uu = v
+                .into_iter()
+                .find(|y| (y.city == city) | (y.city_ascii == city));
             match uu {
                 Some(ci) => Ok(Some((ci.lat, ci.lng))),
                 None => Ok(None),
@@ -387,7 +395,10 @@ fn main() -> Result<()> {
     }
 
     if !(0.0..=120.0).contains(&hours) {
-        bail!("Hour offset '{}' not between one and one-hundred and twenty", days);
+        bail!(
+            "Hour offset '{}' not between one and one-hundred and twenty",
+            days
+        );
     }
 
     let now = Utc::now();
