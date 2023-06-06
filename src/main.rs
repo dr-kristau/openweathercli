@@ -143,12 +143,12 @@ fn get_latlonloc(
     }
 
 
-    return Ok((
+    Ok((
         m_lat,
         m_lon,
         format!("{} [{},{}]", loc, m_lat, m_lon),
         Some(timeoffset),
-    ));
+    ))
 }
 
 fn calc_wetbulb(temp_c: f64, humid: f64) -> f64 {
@@ -324,7 +324,7 @@ fn load_cities() -> Result<Vec<WordCities>> {
 fn find_customplace(loc: &str) -> Result<Option<CustomPlaces>> {
     match load_customplace() {
         Ok(v) => {
-            let uu = v.into_iter().find(|y| &y.name == loc);
+            let uu = v.into_iter().find(|y| y.name == loc);
             match uu {
                 Some(ci) => Ok(Some(ci)),
                 None => Ok(None),
@@ -339,12 +339,9 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
 
     match load_customtz() {
         Ok(tz) => {
-            let custom: Option<CustomTimezones> = tz.into_iter().filter(|y| y.name == city).next();
-            match custom {
-                Some(yes) => {
-                    no_space_city = yes.time_zone;
-                },
-                None => ()
+            let custom: Option<CustomTimezones> = tz.into_iter().find(|y| y.name == city);
+            if let Some(yes) = custom {
+                no_space_city = yes.time_zone;
             }
         }
         Err(e) => bail!("Error {} loading file", e),
@@ -369,7 +366,7 @@ fn find_timezone(city: &str, unix_time: i64) -> Result<Option<i32>> {
 fn find_latlong(city: &str) -> Result<Option<(f64, f64)>> {
     match load_cities() {
         Ok(v) => {
-            let uu = v.into_iter().find(|y| (&y.city == city) | (&y.city_ascii == city));
+            let uu = v.into_iter().find(|y| (y.city == city) | (y.city_ascii == city));
             match uu {
                 Some(ci) => Ok(Some((ci.lat, ci.lng))),
                 None => Ok(None),
