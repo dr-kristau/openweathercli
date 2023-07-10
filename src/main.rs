@@ -172,15 +172,22 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
 
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
+    let mut risk_test = "".to_string();
+
     if wet_bulb_f <= 80.0 {
+        risk_test = "[NO RISK]".to_string();
         stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
     } else if wet_bulb_f <= 85.0 {
+        risk_test = "[LOW RISK]".to_string();
         stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
     } else if wet_bulb_f <= 88.0 {
+        risk_test = "[MODERATE RISK]".to_string();
         stdout.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
     } else if wet_bulb_f <= 90.0 {
+        risk_test = "[HIGH RISK]".to_string();
         stdout.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
     } else if wet_bulb_f > 90.0 {
+        risk_test = "[EXTREME RISK]".to_string();
         stdout.set_color(ColorSpec::new().set_fg(Some(Color::Blue)))?;
     }
 
@@ -210,7 +217,7 @@ fn print_current(current: Current, location: String, timezone: Option<FixedOffse
     println!("Cloud cover: {}%", current.clouds);
     println!("Dew Point: {}ºC", current.dew_point);
     println!("Heat Index: {}ºC", current.feels_like);
-    println!("Wet Bulb: {:.2}ºC", wet_bulb_c);
+    println!("Wet Bulb: {:.2}ºC {}", wet_bulb_c, risk_test);
     if let Some(snow) = current.snow {
         if let Some(h1) = snow.h1 {
             println!("Snow one-hour: {}mm", h1);
