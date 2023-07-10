@@ -80,9 +80,9 @@ fn get_latlonloc(
     let mut m_lat = lat;
     let mut m_lon = lon;
     let mut timeoffset = if time < 0 {
-        FixedOffset::west(-time * 3600)
+        FixedOffset::west_opt(-time * 3600).unwrap()
     } else {
-        FixedOffset::east(time * 3600)
+        FixedOffset::east_opt(time * 3600).unwrap()
     };
 
     fn match_timezone(city: &str, ux: i64, tos: FixedOffset) -> Result<FixedOffset> {
